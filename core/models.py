@@ -17,5 +17,6 @@ class Task(models.Model):
     title = models.CharField(max_length=120)
     description = models.CharField(max_length=255, blank=True)
     due_date = models.DateField(null=True)
+    notification = models.DateTimeField(null=True)
     reporter = models.ForeignKey(to=User, on_delete=models.SET_NULL, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=TO_DO)
