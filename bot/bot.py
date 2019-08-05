@@ -6,6 +6,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "task_manager_api.settings")
 import django
 django.setup()
 from datetime import date, timedelta
+from time import sleep
 from django.contrib.auth.models import User
 from django.conf import settings
 
@@ -14,6 +15,7 @@ from core.models import Task
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 def hello(bot, update):
@@ -82,31 +84,47 @@ def task_create(bot, update):
 
 GET_COMMAND, TASK_CREATE, GET_DEADLINE, GET_NOTIFICATION = range(4)
 
-updater = Updater(settings.TELEGRAM_BOT_TOKEN)
 
-conv_handler = ConversationHandler(
-        entry_points=[
-            CommandHandler('start', start),
-        ],
-        states={
-            GET_COMMAND: [
-                RegexHandler('^Create Task$', add_task),
-                RegexHandler('^List All Tasks$', list_tasks),
+def launch_bot():
+    updater = Updater(settings.TELEGRAM_BOT_TOKEN)
+
+    conv_handler = ConversationHandler(
+            entry_points=[
+                CommandHandler('start', start),
             ],
-            TASK_CREATE: [
-                MessageHandler(Filters.text, task_create),
+            states={
+                GET_COMMAND: [
+                    RegexHandler('^Create Task$', add_task),
+                    RegexHandler('^List All Tasks$', list_tasks),
+                ],
+                TASK_CREATE: [
+                    MessageHandler(Filters.text, task_create),
+                ],
+                GET_DEADLINE: [
+                    CallbackQueryHandler(task_deadline)
+                ]
+            },
+            fallbacks=[
+                CommandHandler('help', help),
             ],
-            GET_DEADLINE: [
-                CallbackQueryHandler(task_deadline)
-            ]
-        },
-        fallbacks=[
-            CommandHandler('help', help),
-        ],
-        allow_reentry=True
-    )
+            allow_reentry=True
+        )
 
-updater.dispatcher.add_handler(conv_handler)
+    updater.dispatcher.add_handler(conv_handler)
 
-updater.start_polling()
-updater.idle()
+    updater.start_polling()
+    updater.idle()
+
+
+def bot_loop():
+    while True:
+        try:
+            launch_bot()
+        except Exception as e:
+            logger.warning(e)
+        logger.info("Bot has finished")
+        sleep(5)
+
+
+if __name__ == '__main__':
+    launch_bot()
