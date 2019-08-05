@@ -14,7 +14,8 @@ from core.models import Task
 
 
 logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    filename="bot.log")
 logger = logging.getLogger(__name__)
 
 
@@ -114,6 +115,7 @@ def launch_bot():
 
     updater.start_polling()
     updater.idle()
+    logger.info("Started bot")
 
 
 def bot_loop():
