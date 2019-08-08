@@ -145,7 +145,7 @@ def add_notification_date(bot, update, job_queue, user_data):
     task.save(update_fields=["notification"])
     chat_id = update.message.chat_id
     local = pytz.timezone(settings.TIME_ZONE)
-    utc = pytz.timezone("UTC"
+    utc = pytz.timezone("UTC")
     naive_datetime = local.localize(notification).astimezone(utc)
     job_queue.run_once(alarm, naive_datetime, context={
         "chat_id": chat_id,
