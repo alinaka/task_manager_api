@@ -22,20 +22,23 @@ logger = logging.getLogger(__name__)
 
 def deadline_handler(bot,update, user_data):
     selected, date = telegramcalendar.process_calendar_selection(bot, update)
+
     task = user_data["task"]
     task.due_date = date
     task.save(update_fields=["due_date"])
     reply_keyboard = [['Yes', 'No']]
-    update.message.reply_text(f"You selected {date}. Do you want to get notification?", reply_markup=ReplyKeyboardMarkup(
-        reply_keyboard, one_time_keyboard=True))
+    bot.send_message(chat_id=update.callback_query.from_user.id,
+                     text=f"You selected {date}. Do you want to get notification?",
+                     reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
     return ADD_NOTIFICATION
 
 
 def notification_handler(bot,update, user_data):
     selected, date = telegramcalendar.process_calendar_selection(bot, update)
     user_data.update(notification_date=date)
-    update.message.reply_text(f"You selected {date}. Enter notification time in format 'HH:MM'",
-                              reply_markup=ReplyKeyboardRemove())
+    bot.send_message(chat_id=update.callback_query.from_user.id,
+                     text=f"You selected {date}. Enter notification time in format 'HH:MM'",
+                     reply_markup=ReplyKeyboardRemove())
     return ADD_NOTIFICATION_TIME
 
 
