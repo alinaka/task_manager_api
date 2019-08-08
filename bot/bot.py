@@ -5,10 +5,11 @@ import os
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "task_manager_api.settings")
 import django
 django.setup()
-from datetime import date, timedelta
+from datetime import datetime
 from time import sleep
 from django.contrib.auth.models import User
 from django.conf import settings
+import telegramcalendar
 
 from core.models import Task
 
@@ -17,6 +18,32 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     filename="bot.log")
 logger = logging.getLogger(__name__)
+
+
+def deadline_handler(bot,update, user_data):
+    selected, date = telegramcalendar.process_calendar_selection(bot, update)
+    if selected:
+        bot.send_message(chat_id=update.callback_query.from_user.id,
+                        text="You selected %s" % (date.strftime("%d/%m/%Y")),
+                        reply_markup=ReplyKeyboardRemove())
+    task = user_data["task"]
+    task.due_date = date
+    task.save(update_fields=["due_date"])
+    reply_keyboard = [['Yes', 'No']]
+    update.message.reply_text("Do you want to get notification?", reply_markup=ReplyKeyboardMarkup(
+        reply_keyboard, one_time_keyboard=True))
+    return ADD_NOTIFICATION
+
+
+def notification_handler(bot,update, user_data):
+    selected, date = telegramcalendar.process_calendar_selection(bot, update)
+    if selected:
+        bot.send_message(chat_id=update.callback_query.from_user.id,
+                         text="You selected %s" % (date.strftime("%d/%m/%Y")),
+                         reply_markup=ReplyKeyboardRemove())
+    user_data.update(notification_date=date)
+    update.message.reply_text("Enter notification time in format 'HH:MM'")
+    return ADD_NOTIFICATION_TIME
 
 
 def hello(bot, update):
@@ -60,30 +87,79 @@ def list_tasks(bot, update):
     return
 
 
-def task_deadline(bot, update):
-
-    return GET_NOTIFICATION
-
-
-def get_dates_list(task_id, days=5):
-    current = date.today()
-    keyboard = [[InlineKeyboardButton(str(current + timedelta(days=i)), callback_data=task_id)]
-                for i in range(days+1)]
-    keyboard.append([InlineKeyboardButton("other date", callback_data="other")])
-    keyboard_markup = InlineKeyboardMarkup(keyboard)
-    return keyboard_markup
+def add_deadline(bot, update):
+    update.message.reply_text("Please select a date: ",
+                              reply_markup=telegramcalendar.create_calendar())
+    return GET_DEADLINE
 
 
-def task_create(bot, update):
+def task_create(bot, update, user_data):
     username = update.message.from_user.username
     user, _ = User.objects.get_or_create(username=username)
     task_title = update.message.text
     task = Task.objects.create(reporter=user, title=task_title)
-    update.message.reply_text("What is the deadline for this one?", reply_markup=get_dates_list(task.id))
-    return GET_DEADLINE
+    user_data.update(task=task)
+    reply_keyboard = [['Yes', 'No']]
+    update.message.reply_text("Does the task have the deadline?", reply_markup=ReplyKeyboardMarkup(
+        reply_keyboard, one_time_keyboard=True))
+    return ADD_DEADLINE
 
 
-GET_COMMAND, TASK_CREATE, GET_DEADLINE, GET_NOTIFICATION = range(4)
+def cancel(bot, update):
+    user = update.message.from_user
+    logger.info("User %s canceled the conversation.", user.username)
+    update.message.reply_text('Bye! I hope we can talk again some day.', reply_markup=ReplyKeyboardRemove())
+    return ConversationHandler.END
+
+
+def say_goodbye(bot, update, user_data):
+    user_data.clear()
+    update.message.reply_text('Thank you! I hope we can talk again some day.')
+    return ConversationHandler.END
+
+
+def add_notification(bot, update, user_data):
+    update.message.reply_text("Please select a date: ",
+                              reply_markup=telegramcalendar.create_calendar())
+    return GET_NOTIFICATION
+
+
+def alarm(bot, job):
+    """Send the alarm message."""
+    bot.send_message(job.context, text='Beep!')
+
+
+def add_notification_date(bot, update, job_queue, user_data):
+    notification_time = update.message.text
+    notification_date = user_data["notification_date"]
+    try:
+        hour, minutes = map(int, notification_time.split(":"))
+        notification = datetime(year=notification_date.year,
+                                month=notification_date.month,
+                                day=notification_date.day,
+                                hour=hour,
+                                minute=minutes)
+    except ValueError:
+        update.message.reply_text("Please enter a valid time in format 'HH:MM'")
+        return None
+    task = user_data["task"]
+    task.notification = notification
+    task.save(update_fields=["notification"])
+    chat_id = update.message.chat_id
+    job_queue.run_once(alarm, notification, context=chat_id)
+    update.message.reply_text(
+        f"Thanks! I'll send you a notification on your task on {notification:%A}, {notification}.")
+    return ConversationHandler.END
+
+
+def no_deadline(bot, update):
+    reply_keyboard = [['Yes', 'No']]
+    update.message.reply_text("Do you want to get notification?", reply_markup=ReplyKeyboardMarkup(
+        reply_keyboard, one_time_keyboard=True))
+    return ADD_NOTIFICATION
+
+
+GET_COMMAND, TASK_CREATE, GET_DEADLINE, ADD_NOTIFICATION, ADD_DEADLINE, GET_NOTIFICATION, ADD_NOTIFICATION_TIME = range(7)
 
 
 def launch_bot():
@@ -99,14 +175,28 @@ def launch_bot():
                     RegexHandler('^List All Tasks$', list_tasks),
                 ],
                 TASK_CREATE: [
-                    MessageHandler(Filters.text, task_create),
+                    MessageHandler(Filters.text, task_create, pass_user_data=True),
+                ],
+                ADD_DEADLINE: [
+                    RegexHandler('^Yes$', add_deadline),
+                    RegexHandler('^No$', no_deadline),
                 ],
                 GET_DEADLINE: [
-                    CallbackQueryHandler(task_deadline)
+                    CallbackQueryHandler(deadline_handler, pass_user_data=True)
+                ],
+                ADD_NOTIFICATION: [
+                    RegexHandler('^Yes$', add_notification, pass_user_data=True),
+                    RegexHandler('^No$', say_goodbye, pass_user_data=True),
+                ],
+                GET_NOTIFICATION: [
+                    CallbackQueryHandler(notification_handler, pass_user_data=True)
+                ],
+                ADD_NOTIFICATION_TIME: [
+                    MessageHandler(Filters.text, add_notification_date, pass_user_data=True, pass_job_queue=True),
                 ]
             },
             fallbacks=[
-                CommandHandler('help', help),
+                CommandHandler('cancel', cancel),
             ],
             allow_reentry=True
         )
