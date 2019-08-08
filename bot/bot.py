@@ -67,7 +67,7 @@ def task_deadline(bot, update):
 
 def get_dates_list(task_id, days=5):
     current = date.today()
-    keyboard = [[InlineKeyboardButton(current + timedelta(days=i), callback_data=task_id)]
+    keyboard = [[InlineKeyboardButton(str(current + timedelta(days=i)), callback_data=task_id)]
                 for i in range(days+1)]
     keyboard.append([InlineKeyboardButton("other date", callback_data="other")])
     keyboard_markup = InlineKeyboardMarkup(keyboard)
