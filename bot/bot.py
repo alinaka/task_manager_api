@@ -1,11 +1,8 @@
 import logging
 from datetime import datetime
-# import os
 from time import sleep
 
-# import django
 from django.conf import settings
-from django.contrib.auth.models import User
 from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
                       ReplyKeyboardMarkup, ReplyKeyboardRemove)
 from telegram.ext import (CallbackQueryHandler, CommandHandler,
@@ -14,9 +11,7 @@ from telegram.ext import (CallbackQueryHandler, CommandHandler,
 
 from bot import telegramcalendar
 from core.models import Task
-
-# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "task_manager_api.settings")
-# django.setup()
+from user.models import User
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -109,8 +104,14 @@ def add_deadline(bot, update):
 
 
 def task_create(bot, update, user_data):
-    username = update.message.from_user.username
-    user, _ = User.objects.get_or_create(username=username)
+    user = update.message.from_user
+    user, _ = User.objects.get_or_create(
+        username=user.username, defaults={
+            "telegram_id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name
+        }
+    )
     task_title = update.message.text
     task = Task.objects.create(reporter=user, title=task_title)
     user_data.update(task=task)
