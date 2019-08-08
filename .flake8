@@ -1,0 +1,9 @@
+[flake8]
+ignore = C812
+inline-quotes="
+max-complexity=10
+exclude =
+    .git,
+    __pycache__,
+    migrations,
+    venv

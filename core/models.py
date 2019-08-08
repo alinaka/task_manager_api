@@ -19,4 +19,5 @@ class Task(models.Model):
     due_date = models.DateField(null=True)
     notification = models.DateTimeField(null=True)
     reporter = models.ForeignKey(to=User, on_delete=models.SET_NULL, null=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=TO_DO)
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=TO_DO)
