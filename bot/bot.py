@@ -122,7 +122,7 @@ def add_notification(bot, update, user_data):
 
 def alarm(bot, job):
     """Send the alarm message."""
-    bot.send_message(job.context, text='Beep!')
+    bot.send_message(job.context["chat_id"], text=job.context["task_data"])
 
 
 def add_notification_date(bot, update, job_queue, user_data):
@@ -133,7 +133,7 @@ def add_notification_date(bot, update, job_queue, user_data):
         notification = datetime(year=notification_date.year,
                                 month=notification_date.month,
                                 day=notification_date.day,
-                                hour=hour,
+                                hour=hour - 3,
                                 minute=minutes)
     except ValueError:
         update.message.reply_text("Please enter a valid time in format 'HH:MM'")
@@ -142,7 +142,10 @@ def add_notification_date(bot, update, job_queue, user_data):
     task.notification = notification
     task.save(update_fields=["notification"])
     chat_id = update.message.chat_id
-    job_queue.run_once(alarm, notification, context=chat_id)
+    job_queue.run_once(alarm, notification, context={
+        "chat_id": chat_id,
+        "task_data": f"You have a task {task.title} {task.description} to do before {task.due_date}!"
+    })
     update.message.reply_text(
         f"Thanks! I'll send you a notification on your task on {notification:%A}, {notification}.")
     return ConversationHandler.END
