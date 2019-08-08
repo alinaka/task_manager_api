@@ -1,5 +1,3 @@
-import pytz
-
 from telegram.ext import Updater, CommandHandler, ConversationHandler, RegexHandler, MessageHandler, Filters, CallbackQueryHandler
 from telegram import ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 import logging
@@ -144,10 +142,7 @@ def add_notification_date(bot, update, job_queue, user_data):
     task.notification = notification
     task.save(update_fields=["notification"])
     chat_id = update.message.chat_id
-    local = pytz.timezone(settings.TIME_ZONE)
-    utc = pytz.timezone("UTC")
-    naive_datetime = local.localize(notification).astimezone(utc).replace(tzinfo=None)
-    job_queue.run_once(alarm, naive_datetime, context={
+    job_queue.run_once(alarm, notification, context={
         "chat_id": chat_id,
         "task_data": f"You have a task {task.title} {task.description} to do before {task.due_date}!"
     })
