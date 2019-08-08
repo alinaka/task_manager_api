@@ -9,7 +9,7 @@ from datetime import datetime
 from time import sleep
 from django.contrib.auth.models import User
 from django.conf import settings
-import telegramcalendar
+from bot import telegramcalendar
 
 from core.models import Task
 
