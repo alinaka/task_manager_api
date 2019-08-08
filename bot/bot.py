@@ -135,7 +135,7 @@ def add_notification_date(bot, update, job_queue, user_data):
         notification = datetime(year=notification_date.year,
                                 month=notification_date.month,
                                 day=notification_date.day,
-                                hour=hour - 3,
+                                hour=hour,
                                 minute=minutes)
     except ValueError:
         update.message.reply_text("Please enter a valid time in format 'HH:MM'")
@@ -146,7 +146,7 @@ def add_notification_date(bot, update, job_queue, user_data):
     chat_id = update.message.chat_id
     local = pytz.timezone(settings.TIME_ZONE)
     utc = pytz.timezone("UTC")
-    naive_datetime = local.localize(notification).astimezone(utc)
+    naive_datetime = local.localize(notification).astimezone(utc).replace(tzinfo=None)
     job_queue.run_once(alarm, naive_datetime, context={
         "chat_id": chat_id,
         "task_data": f"You have a task {task.title} {task.description} to do before {task.due_date}!"
