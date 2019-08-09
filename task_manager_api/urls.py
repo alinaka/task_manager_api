@@ -16,18 +16,13 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path
-from rest_framework import routers
 
-from core import views as core_views
-from user import views
-
-router = routers.DefaultRouter()
-router.register(r"users", views.UserViewSet)
-router.register(r"groups", views.GroupViewSet)
-router.register(r"tasks", core_views.TaskViewSet)
+from core.urls import urlpatterns as core_urls
+from user.urls import urlpatterns as user_urls
 
 urlpatterns = [
-    path("", include(router.urls)),
+    path("", include(user_urls)),
+    path("", include(core_urls)),
     path("api-auth/",
          include("rest_framework.urls", namespace="rest_framework"))
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
