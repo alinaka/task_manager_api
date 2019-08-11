@@ -101,7 +101,9 @@ def list_tasks(bot, update):
 
 
 def get_task_fields():
-    fields = [field.name for field in Task._meta.get_fields()]
+    fields = [field.name for field in Task._meta.get_fields() if field.name not in (
+        "id", "reporter", "created"
+    )]
     keyboard = [[InlineKeyboardButton(name, callback_data=name)]
                 for name in fields]
     keyboard_markup = InlineKeyboardMarkup(keyboard)
@@ -125,7 +127,7 @@ def task_view(bot, update, user_data):
 
 
 def list_edit_options(bot, update, user_data):
-    update.message.reply_text("Choose a task to view:", reply_markup=get_task_fields())
+    update.message.reply_text("Choose a property to edit:", reply_markup=get_task_fields())
     return GET_EDIT_ACTION
 
 
