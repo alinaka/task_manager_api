@@ -48,11 +48,6 @@ def notification_handler(bot, update, user_data):
     return ADD_NOTIFICATION_TIME
 
 
-def hello(bot, update):
-    update.message.reply_text(
-        "Hello {}".format(update.message.from_user.first_name))
-
-
 def get_username(update):
     return update.effective_user.username
 
@@ -80,21 +75,70 @@ def add_task(bot, update):
     return TASK_CREATE
 
 
-def get_tasks_list():
-    tasks = Task.objects.all()
-    keyboard = [[InlineKeyboardButton(task.title, callback_data=task.title)]
+def get_tasks_list(user: User):
+    tasks = Task.objects.filter(reporter=user)
+    keyboard = [[InlineKeyboardButton(task.title, callback_data=task.id)]
                 for task in tasks]
     keyboard_markup = InlineKeyboardMarkup(keyboard)
     return keyboard_markup
 
 
 def list_tasks(bot, update):
+    user = update.message.from_user
+    user, _ = User.objects.get_or_create(
+        username=user.username, defaults={
+            "telegram_id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name
+        }
+    )
     reply_markup = ReplyKeyboardRemove()
     message = update.message.reply_text(
         "Getting tasks list ...", reply_markup=reply_markup
     )
-    message.reply_text("Choose a task to view:", reply_markup=get_tasks_list())
-    return
+    message.reply_text("Choose a task to view:", reply_markup=get_tasks_list(user))
+    return TASK_VIEW
+
+
+def get_task_fields():
+    fields = [field.name for field in Task._meta.get_fields()]
+    keyboard = [[InlineKeyboardButton(name, callback_data=name)]
+                for name in fields]
+    keyboard_markup = InlineKeyboardMarkup(keyboard)
+    return keyboard_markup
+
+
+def task_view(bot, update, user_data):
+    task_id = update.callback_query.data
+    task = Task.objects.get(id=task_id)
+    reply_keyboard = [["Edit", "Delete"]]
+    user_data["task"] = task
+    bot.send_message(chat_id=update.callback_query.from_user.id,
+                     text=f"Task {task.title}\nDescription: {task.description}\n"
+                     f"Due date: {task.due_date}\nNotification: {task.notification}"
+                     f"Status: {task.status}",
+                     reply_markup=ReplyKeyboardMarkup(
+                         reply_keyboard,
+                         one_time_keyboard=True)
+                     )
+    return SELECT_ACTION
+
+
+def list_edit_options(bot, update, user_data):
+    update.message.reply_text("Choose a task to view:", reply_markup=get_task_fields())
+    return GET_EDIT_ACTION
+
+
+def delete_task(bot, update, user_data):
+    task = user_data["task"]
+    title = task.title
+    task.delete()
+    user_data.clear()
+    update.message.reply_text(
+        f"The task {title} is deleted.",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    return ConversationHandler.END
 
 
 def add_deadline(bot, update):
@@ -144,6 +188,29 @@ def add_notification(bot, update, user_data):
     update.message.reply_text("Please select a date: ",
                               reply_markup=telegramcalendar.create_calendar())
     return GET_NOTIFICATION
+
+
+def get_edit_action(bot, update, user_data):
+    field = update.callback_query.data
+    user_data["edit"] = field
+    bot.send_message(chat_id=update.callback_query.from_user.id,
+                     text=f"Please, send a new value for the task`s {field}.")
+    return GET_NEW_VALUE
+
+
+def edit_task(bot, update, user_data):
+    task = user_data["task"]
+    field = user_data["edit"]
+    value = update.message.text
+    try:
+        setattr(task, field, value)
+        task.save()
+    except ValueError:
+        update.message.reply_text("Please send a valid value")
+        return
+    update.message.reply_text(f"The task {task.title} is updated.")
+    user_data.clear()
+    return ConversationHandler.END
 
 
 def alarm(bot, job):
@@ -200,8 +267,12 @@ def no_deadline(bot, update):
     ADD_NOTIFICATION,
     ADD_DEADLINE,
     GET_NOTIFICATION,
-    ADD_NOTIFICATION_TIME
-) = range(7)
+    ADD_NOTIFICATION_TIME,
+    TASK_VIEW,
+    SELECT_ACTION,
+    GET_EDIT_ACTION,
+    GET_NEW_VALUE
+) = range(8)
 
 
 def launch_bot():
@@ -256,6 +327,33 @@ def launch_bot():
                     add_notification_date,
                     pass_user_data=True,
                     pass_job_queue=True),
+            ],
+            TASK_VIEW: [
+                CallbackQueryHandler(
+                    task_view,
+                    pass_user_data=True)
+            ],
+            SELECT_ACTION: [
+                RegexHandler(
+                    "^Edit$",
+                    list_edit_options,
+                    pass_user_data=True),
+                RegexHandler(
+                    "^Delete$",
+                    delete_task,
+                    pass_user_data=True),
+
+            ],
+            GET_EDIT_ACTION: [
+                CallbackQueryHandler(
+                    get_edit_action,
+                    pass_user_data=True)
+            ],
+            GET_NEW_VALUE: [
+                MessageHandler(
+                    Filters.text,
+                    edit_task,
+                    pass_user_data=True),
             ]
         },
         fallbacks=[
