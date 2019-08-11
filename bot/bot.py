@@ -272,7 +272,7 @@ def no_deadline(bot, update):
     SELECT_ACTION,
     GET_EDIT_ACTION,
     GET_NEW_VALUE
-) = range(8)
+) = range(11)
 
 
 def launch_bot():
