@@ -1,8 +1,6 @@
 FROM python:3.6
 ENV PYTHONUNBUFFERED 1
 RUN mkdir /code
-RUN mkdir /var/data/
 WORKDIR /code
 COPY . /code/
-RUN mkdir data/
 RUN pip install -r requirements.txt

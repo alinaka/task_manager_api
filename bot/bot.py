@@ -279,7 +279,7 @@ def no_deadline(bot, update):
 ) = range(11)
 
 
-JOBS_PICKLE = 'data/job_tuples.pickle'
+JOBS_PICKLE = '/var/data/job_tuples.pickle'
 
 
 def load_jobs(jq):
