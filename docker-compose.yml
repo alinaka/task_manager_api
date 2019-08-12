@@ -20,7 +20,7 @@ services:
       - .:/code
       - /var/log/task_manager_api/:/var/log/task_manager_api/
     ports:
-      - "80:8000"
+      - "8000:8000"
     depends_on:
       - db
   bot:
