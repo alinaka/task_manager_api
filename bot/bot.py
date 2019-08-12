@@ -1,8 +1,8 @@
 import logging
 import pickle
 from datetime import datetime, timedelta
-from time import sleep, time
 from threading import Event
+from time import sleep, time
 
 from django.conf import settings
 from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
@@ -98,14 +98,16 @@ def list_tasks(bot, update):
     message = update.message.reply_text(
         "Getting tasks list ...", reply_markup=reply_markup
     )
-    message.reply_text("Choose a task to view:", reply_markup=get_tasks_list(user))
+    message.reply_text(
+        "Choose a task to view:", reply_markup=get_tasks_list(user))
     return TASK_VIEW
 
 
 def get_task_fields():
-    fields = [field.name for field in Task._meta.get_fields() if field.name not in (
-        "id", "reporter", "created"
-    )]
+    fields = [
+        field.name for field in Task._meta.get_fields()
+        if field.name not in ("id", "reporter", "created")
+    ]
     keyboard = [[InlineKeyboardButton(name, callback_data=name)]
                 for name in fields]
     keyboard_markup = InlineKeyboardMarkup(keyboard)
@@ -118,8 +120,10 @@ def task_view(bot, update, user_data):
     reply_keyboard = [["Edit", "Delete"]]
     user_data["task"] = task
     bot.send_message(chat_id=update.callback_query.from_user.id,
-                     text=f"Task {task.title}\nDescription: {task.description}\n"
-                     f"Due date: {task.due_date}\nNotification: {task.notification}"
+                     text=f"Task {task.title}\nDescription: "
+                     f"{task.description}\n"
+                     f"Due date: {task.due_date}\nNotification: "
+                     f"{task.notification}\n"
                      f"Status: {task.status}",
                      reply_markup=ReplyKeyboardMarkup(
                          reply_keyboard,
@@ -129,7 +133,8 @@ def task_view(bot, update, user_data):
 
 
 def list_edit_options(bot, update, user_data):
-    update.message.reply_text("Choose a property to edit:", reply_markup=get_task_fields())
+    update.message.reply_text(
+        "Choose a property to edit:", reply_markup=get_task_fields())
     return GET_EDIT_ACTION
 
 
@@ -279,13 +284,13 @@ def no_deadline(bot, update):
 ) = range(11)
 
 
-JOBS_PICKLE = '/var/data/job_tuples.pickle'
+JOBS_PICKLE = "/var/data/job_tuples.pickle"
 
 
 def load_jobs(jq):
     now = time()
 
-    with open(JOBS_PICKLE, 'rb') as fp:
+    with open(JOBS_PICKLE, "rb") as fp:
         while True:
             try:
                 next_t, job = pickle.load(fp)
@@ -316,7 +321,7 @@ def save_jobs(jq):
     else:
         job_tuples = []
 
-    with open(JOBS_PICKLE, 'wb') as fp:
+    with open(JOBS_PICKLE, "wb") as fp:
         for next_t, job in job_tuples:
             # Back up objects
             _job_queue = job._job_queue

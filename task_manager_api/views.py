@@ -1,6 +1,6 @@
+from rest_framework import views
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
-from rest_framework import views
 
 
 class APIRootView(views.APIView):

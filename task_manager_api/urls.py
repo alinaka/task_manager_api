@@ -19,9 +19,8 @@ from django.urls import include, path
 from rest_framework.authtoken.views import obtain_auth_token
 
 from core.urls import urlpatterns as core_urls
-from user.urls import urlpatterns as user_urls
-
 from task_manager_api import views
+from user.urls import urlpatterns as user_urls
 
 api_urls = [
     path("", include(user_urls)),
