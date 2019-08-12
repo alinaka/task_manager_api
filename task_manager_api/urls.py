@@ -21,8 +21,15 @@ from rest_framework.authtoken.views import obtain_auth_token
 from core.urls import urlpatterns as core_urls
 from user.urls import urlpatterns as user_urls
 
-urlpatterns = [
+from task_manager_api import views
+
+api_urls = [
     path("", include(user_urls)),
-    path("", include(core_urls)),
+    path("", include(core_urls))
+]
+
+urlpatterns = [
+    path("", views.APIRootView.as_view()),
+    path("api/", include(api_urls)),
     path("login/", obtain_auth_token)
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
