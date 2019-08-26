@@ -4,3 +4,6 @@ RUN mkdir /code
 WORKDIR /code
 COPY . /code/
 RUN pip install -r requirements.txt
+COPY ./bot_launch.sh /bot_launch.sh
+RUN chmod +x /bot_launch.sh
+CMD ["/bot_launch.sh"]
