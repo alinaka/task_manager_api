@@ -3,7 +3,7 @@ certifi==2019.6.16
 cffi==1.12.3
 cryptography==2.7
 Django==2.2.3
-djangorestframework==3.10.1
+djangorestframework==3.11.2
 entrypoints==0.3
 flake8==3.7.8
 flake8-commas==2.0.0
